@@ -9,7 +9,4 @@ wheels/
 # venv
 .venv
 
-dlogs_parquet
-dlogs_parquet2
-logs_parquet
-test.ipynb
+data
