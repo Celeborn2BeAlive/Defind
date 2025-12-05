@@ -21,7 +21,7 @@ assert ABI.is_file()
 registry = make_event_registry_from_abi(ABI)
 config = OrchestratorConfig(
     rpc_url="https://base-rpc.publicnode.com",
-    address="0xb2cc224c1c9fee385f8ad6a55b4d94e92359dc59",  # Uniswap USDC/ETH v3 0.05%
+    address="0xb2cc224c1c9fee385f8ad6a55b4d94e92359dc59",  # Aerodrome USDC/ETH CL100
     topic0s=get_event_registry_topic0s(registry),
     start_block=13899892,  # Creation block of the pool
     end_block="latest",
