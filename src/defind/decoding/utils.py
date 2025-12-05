@@ -41,19 +41,3 @@ def parse_data_word(word: bytes, typ: str) -> Any:
             v -= 2**bits
         return v
     return "0x" + word.hex()
-
-
-def resolve_ref(
-    ref: str | None,
-    topic_vals: dict[str, Any],
-    data_vals: dict[str, Any],
-) -> Any:
-    """Resolve a projection reference like 'topic.foo', 'data.bar', or a literal."""
-    if ref is None:
-        return None
-    if ref.startswith("topic."):
-        return topic_vals.get(ref.split(".", 1)[1])
-    if ref.startswith("data."):
-        return data_vals.get(ref.split(".", 1)[1])
-    # Return literal value (not a reference)
-    return ref

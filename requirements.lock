@@ -21,6 +21,9 @@ certifi==2025.8.3
     # via httpx
 click==8.2.1
     # via defind
+colorama==0.4.6
+    # via click
+    # via ipython
 comm==0.2.3
     # via ipykernel
 cytoolz==1.0.1
@@ -29,8 +32,6 @@ debugpy==1.8.16
     # via ipykernel
 decorator==5.2.1
     # via ipython
-duckdb==1.4.0
-    # via defind
 eth-abi==5.2.0
     # via defind
 eth-hash==0.7.1
@@ -91,16 +92,12 @@ parsimonious==0.10.0
     # via eth-abi
 parso==0.8.5
     # via jedi
-pexpect==4.9.0
-    # via ipython
 platformdirs==4.4.0
     # via jupyter-core
 prompt-toolkit==3.0.52
     # via ipython
 psutil==7.0.0
     # via ipykernel
-ptyprocess==0.7.0
-    # via pexpect
 pure-eval==0.2.3
     # via stack-data
 pyarrow==21.0.0
@@ -120,6 +117,8 @@ python-dateutil==2.9.0.post0
     # via pandas
 pytz==2025.2
     # via pandas
+pywin32==311
+    # via jupyter-core
 pyzmq==27.0.2
     # via ipykernel
     # via jupyter-client

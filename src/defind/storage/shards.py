@@ -2,11 +2,35 @@ from __future__ import annotations
 
 import glob
 import os
+from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
 
 from defind.core.models import Column
+
+
+class ShardsDir:
+    def __init__(
+        self,
+        *,
+        out_root: Path,
+        addr_slug: str,
+        topics_fp: str,
+    ):
+        self.key_name = f"{addr_slug}__topics-{topics_fp}__universal"
+        self.key_dir = out_root / self.key_name
+        self.shards_dir = self.key_dir / "shards"
+        self.shards_dir.mkdir(exist_ok=True, parents=True)
+
+    def shards_files_pattern(self) -> str:
+        return (self.shards_dir / "shard_*.parquet").as_posix()
+
+    def list_shards(self) -> list[str]:
+        return sorted(glob.glob(self.shards_files_pattern()))
+
+    def shard_path(self, idx: int) -> Path:
+        return self.shards_dir / f"shard_{idx:05d}.parquet"
 
 
 class ShardWriter:
@@ -22,9 +46,7 @@ class ShardWriter:
 
     def __init__(
         self,
-        out_root: str,
-        addr_slug: str,
-        topics_fp: str,
+        shards_dir: ShardsDir,
         *,
         rows_per_shard: int = 250_000,
         codec: str = "zstd",
@@ -34,10 +56,7 @@ class ShardWriter:
         self.codec = codec
         self.write_final_partial = write_final_partial
 
-        key_name = f"{addr_slug}__topics-{topics_fp}__universal"
-        self.key_dir = os.path.join(out_root, key_name)
-        self.shards_dir = os.path.join(self.key_dir, "shards")
-        os.makedirs(self.shards_dir, exist_ok=True)
+        self.shards_dir = shards_dir
 
         self.buf = Column.empty()
 
@@ -51,14 +70,11 @@ class ShardWriter:
 
     # ---------- init & helpers ----------
 
-    def _list_shards(self) -> list[str]:
-        return sorted(glob.glob(os.path.join(self.shards_dir, "shard_*.parquet")))
-
     def _init_from_existing(self) -> int:
         """Load last shard (if any). If it's partial, keep it open for topping up."""
-        existing = self._list_shards()
+        existing = self.shards_dir.list_shards()
         if not existing:
-            return 1
+            return 0
 
         last_path = existing[-1]
         last_idx = int(os.path.basename(last_path).split("_")[1].split(".")[0])
@@ -79,25 +95,25 @@ class ShardWriter:
             # Last shard is full or empty, start with next index
             return last_idx + 1
 
-    def _atomic_write(self, out_path: str, table: pa.Table) -> str:
+    def _atomic_write(self, out_path: Path, table: pa.Table) -> Path | None:
         """Write Parquet atomically (tmp + replace)."""
         if len(table) == 0:
-            return ""
-        tmp = out_path + ".tmp"
+            return None
+        tmp = out_path.with_suffix(".tmp")
         pq.write_table(table, tmp, compression=self.codec)
         os.replace(tmp, out_path)
         print(f"💾 wrote → {out_path}  (rows={len(table)}, cols={len(table.schema)})")
         return out_path
 
-    def _shard_path(self, idx: int) -> str:
-        return os.path.join(self.shards_dir, f"shard_{idx:05d}.parquet")
+    def _shard_path(self, idx: int) -> Path:
+        return self.shards_dir.shard_path(idx)
 
     @property
     def _has_open_partial(self) -> bool:
         """Check if there's an open partial shard ready to be topped up."""
         return self._open_partial_idx is not None and self._open_partial_remaining > 0
 
-    def _top_up_partial_shard(self, rows_to_take: int) -> str | None:
+    def _top_up_partial_shard(self, rows_to_take: int) -> Path | None:
         """Top up the currently open partial shard with rows from buffer.
 
         Args:
@@ -124,7 +140,7 @@ class ShardWriter:
 
         # If shard is now full, advance index and clear partial state
         if self._open_partial_remaining == 0:
-            self.shard_idx = (self._open_partial_idx or 0) + 1
+            self.shard_idx = self._open_partial_idx or 0
             self._open_partial_idx = None
             self._open_partial_tbl = None
 
@@ -132,12 +148,12 @@ class ShardWriter:
 
     # ---------- core API ----------
 
-    def add(self, cols: Column) -> list[str]:
+    def add(self, cols: Column) -> list[Path]:
         """Merge `cols` into the aggregator; write shards as they become full.
 
         Returns a list of shard paths that were written/rewritten.
         """
-        written: list[str] = []
+        written: list[Path] = []
 
         appended = self.buf.extend(cols)
         if appended == 0:
@@ -161,7 +177,7 @@ class ShardWriter:
         # 3) Leave any remaining (< rows_per_shard) rows in memory buffer
         return written
 
-    def close(self) -> str | None:
+    def close(self) -> Path | None:
         """Flush remaining rows.
 
         Rules:
@@ -177,7 +193,7 @@ class ShardWriter:
             return None
 
         # If we still have a partial shard open, try topping it up one last time.
-        last_path: str | None = None
+        last_path: Path | None = None
         if self._has_open_partial and size > 0:
             last_path = self._top_up_partial_shard(size)
 

@@ -25,10 +25,10 @@ import pyarrow as pa
 # === Base schema (Arrow) ===
 
 _BASE_FIELDS: list[tuple[str, pa.DataType]] = [
-    ("block_number", pa.int64()),
-    ("block_timestamp", pa.int64()),
+    ("block_number", pa.uint64()),
+    ("block_timestamp", pa.uint64()),
     ("tx_hash", pa.string()),
-    ("log_index", pa.int32()),
+    ("log_index", pa.uint64()),
     ("contract", pa.string()),
     ("event", pa.string()),
 ]
@@ -214,10 +214,10 @@ class Column:
         """Convert the buffer to a sorted Arrow table with deterministic schema."""
         fields = [pa.field(n, t) for n, t in _BASE_FIELDS]
         arrays: dict[str, pa.Array] = {
-            "block_number": pa.array(self.block_number, type=pa.int64()),
-            "block_timestamp": pa.array(self.block_timestamp, type=pa.int64()),
+            "block_number": pa.array(self.block_number, type=pa.uint64()),
+            "block_timestamp": pa.array(self.block_timestamp, type=pa.uint64()),
             "tx_hash": pa.array(self.tx_hash, type=pa.string()),
-            "log_index": pa.array(self.log_index, type=pa.int32()),
+            "log_index": pa.array(self.log_index, type=pa.uint64()),
             "contract": pa.array(self.contract, type=pa.string()),
             "event": pa.array(self.event, type=pa.string()),
         }

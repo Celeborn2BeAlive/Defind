@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import os
 from collections.abc import Generator
+from pathlib import Path
 
 
 def topics_fingerprint(t0s: list[str]) -> str:
@@ -94,7 +95,7 @@ def subtract_iv(iv: tuple[int, int], covered: list[tuple[int, int]]) -> list[tup
     return res
 
 
-def load_done_coverage(manifests_dir: str, exclude_basename: str | None) -> list[tuple[int, int]]:
+def load_done_coverage(manifests_dir: Path, exclude_basename: str | None) -> list[tuple[int, int]]:
     """Load all `[from_block, to_block]` ranges with status 'done' from manifests.
 
     Parameters
@@ -110,8 +111,8 @@ def load_done_coverage(manifests_dir: str, exclude_basename: str | None) -> list
         Merged 'done' intervals across all manifests.
     """
     intervals: list[tuple[int, int]] = []
-    if not os.path.isdir(manifests_dir):
-        return []
+    if not manifests_dir.is_dir():
+        raise ValueError("manifests_dir should be a directory")
     for name in os.listdir(manifests_dir):
         if not name.endswith(".jsonl"):
             continue
