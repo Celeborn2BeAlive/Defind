@@ -1,18 +1,25 @@
-from unittest.mock import AsyncMock, MagicMock, patch
+from pathlib import Path
 from typing import Any
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from defind.core.config import OrchestratorConfig
 from defind.decoding.specs import EventRegistry
-from defind.orchestration.orchestrator import fetch_decode
+from defind.orchestration.orchestrator import SetupDirectoriesResult, fetch_decode
 
 
 @pytest.mark.asyncio
 async def test_fetch_decode_empty_seeds(mock_rpc: Any) -> None:
     # Mock internal components to avoid file I/O and complex setup
     with (
-        patch("defind.orchestration.orchestrator._setup_directories", return_value=("/tmp/key", "/tmp/manifests")),
+        patch(
+            "defind.orchestration.orchestrator._setup_directories",
+            return_value=SetupDirectoriesResult(
+                key_dir=Path("/tmp/key"),
+                manifests_dir=Path("/tmp/manifests"),
+            ),
+        ),
         patch("defind.orchestration.orchestrator.LiveManifest") as MockManifest,
         patch("defind.orchestration.orchestrator.load_done_coverage", return_value=[]),
         patch("defind.orchestration.orchestrator._build_work_seeds", return_value=[]),
@@ -27,13 +34,13 @@ async def test_fetch_decode_empty_seeds(mock_rpc: Any) -> None:
             start_block=0,
             end_block=100,
         )
-        stats = await fetch_decode(
+        fetch_decode_output = await fetch_decode(
             config=config,
             registry=registry,
         )
 
-        assert stats["processed_ok"] == 0
-        assert stats["total_logs"] == 0
+        assert fetch_decode_output.stats.processed_ok == 0
+        assert fetch_decode_output.stats.total_logs == 0
 
 
 @pytest.mark.asyncio
@@ -51,7 +58,13 @@ async def test_fetch_decode_with_work(mock_rpc: Any) -> None:
     mock_rpc.get_logs.return_value = [mock_log]
 
     with (
-        patch("defind.orchestration.orchestrator._setup_directories", return_value=("/tmp/key", "/tmp/manifests")),
+        patch(
+            "defind.orchestration.orchestrator._setup_directories",
+            return_value=SetupDirectoriesResult(
+                key_dir=Path("/tmp/key"),
+                manifests_dir=Path("/tmp/manifests"),
+            ),
+        ),
         patch("defind.orchestration.orchestrator.LiveManifest") as MockManifest,
         patch("defind.orchestration.orchestrator.load_done_coverage", return_value=[]),
         patch("defind.orchestration.orchestrator._build_work_seeds", return_value=[(0, 100)]),
@@ -71,11 +84,11 @@ async def test_fetch_decode_with_work(mock_rpc: Any) -> None:
             start_block=0,
             end_block=100,
         )
-        stats = await fetch_decode(
+        fetch_decode_output = await fetch_decode(
             config=config,
             registry=registry,
         )
 
-        assert stats["executed_subranges"] == 1
-        assert stats["total_logs"] == 1
-        assert stats["processed_ok"] == 1
+        assert fetch_decode_output.stats.executed_subranges == 1
+        assert fetch_decode_output.stats.total_logs == 1
+        assert fetch_decode_output.stats.processed_ok == 1

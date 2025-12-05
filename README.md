@@ -46,27 +46,17 @@ pip install -e .
 
 ### Basic Usage
 
-```python
-from defind.orchestration.orchestrator import fetch_decode
-from defind.decoding.registries import make_clpool_registry
-
-# Setup
-registry = make_clpool_registry()
-
-# Fetch and decode data
-result = await fetch_decode(
-    rpc_url="https://your-ethereum-rpc-url",
-    address="0x...",  # Contract address
-    topic0s=["0x..."],  # Event signatures
-    start_block=18000000,
-    end_block=18001000,
-    registry=registry,
-    out_root="./data",
-    # ... other parameters
-)
-```
+Refer to scripts in the `examples/` directory.
 
 ## 📋 Event Registries
+
+The easiest way of building an event registry is to create it from an ABI file:
+
+```python
+from defind.abi_events import make_event_registry_from_abi
+ABI = EXAMPLES_ROOT / "abi" / "aerodrome_clpool_abi.json"
+registry = make_event_registry_from_abi(ABI)
+```
 
 DefInd comes with pre-built registries for common DeFi protocols:
 
@@ -107,9 +97,10 @@ custom_spec = EventSpec(
         DataFieldSpec("timestamp", 0, "uint256"),
     ],
     projection={
-        "user_address": "topic.user",
-        "token_amount": "topic.amount", 
-        "event_time": "data.timestamp",
+        "user_address": ProjectionRefs.TopicRef(name="user"), # Output column "user_address" will be filled with "user" indexed event input
+        "token_amount": ProjectionRefs.TopicRef(name="amount"),# Output column t"oken_amount" will be filled with "amount" indexed event input
+        "event_time": ProjectionRefs.DataRef(name="timestamp"), # Output column "event_time" will be filled with "timestamp" unindexed event input
+        "custom_field": ProjectionRefs.Constant(value="my_custom_value"), # Output column "custom_field" will be filled with constant "my_custom_value" for all "CustomEvent"
     }
 )
 ```
@@ -142,7 +133,7 @@ DefInd produces Parquet files with a universal schema:
 
 ### Base Columns (always present)
 - `block_number`: Block number (int64)
-- `block_timestamp`: Block timestamp (int64) 
+- `block_timestamp`: Block timestamp (int64)
 - `tx_hash`: Transaction hash (string)
 - `log_index`: Log index within transaction (int32)
 - `contract`: Contract address (string)

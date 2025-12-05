@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -14,7 +15,7 @@ class OrchestratorConfig:
     end_block: int | str
     step: int = 5_000
     concurrency: int = 16
-    out_root: str = "./data"
+    out_root: Path = Path("./data")
     rows_per_shard: int = 250_000
     batch_decode_rows: int = 10_000
     timeout_s: int = 20

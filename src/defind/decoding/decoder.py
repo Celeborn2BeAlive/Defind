@@ -15,8 +15,8 @@ from typing import Any
 from eth_utils import to_checksum_address  # type: ignore[attr-defined]
 
 from defind.core.models import Meta
-from defind.decoding.specs import EventRegistry, EventSpec
-from defind.decoding.utils import parse_data_word, parse_topic_field, resolve_ref, word_at
+from defind.decoding.specs import EventRegistry, EventSpec, resolve_projection_ref
+from defind.decoding.utils import parse_data_word, parse_topic_field, word_at
 
 # ---------- parsed event ----------
 
@@ -120,7 +120,7 @@ def decode_event(
     # Dynamically resolve ALL projection keys
     resolved: dict[str, Any] = {}
     for out_key, ref in spec.projection.items():
-        v = resolve_ref(ref, topic_vals, data_vals)
+        v = resolve_projection_ref(ref, topic_vals, data_vals)
         if isinstance(v, int):
             v = str(v)  # Arrow safety for big ints
         resolved[out_key] = v
